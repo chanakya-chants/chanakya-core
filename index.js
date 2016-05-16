@@ -188,6 +188,14 @@
     }
   };
 
+  core.getSession = function (id) {
+    return chatSession[id];
+  };
+
+  core.setSession = function (sessionData) {
+    chatSession[sessionData.id] = sessionData;
+  };
+
   module.exports = core;
 
 }());
