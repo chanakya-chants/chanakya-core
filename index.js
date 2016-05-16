@@ -11,7 +11,8 @@
     server = express(),
     bodyParser = require('body-parser'),
     https = require('https'),
-    Q = require('q');
+    Q = require('q'),
+    path = require('path');
 
   var core = {}, app = {}, chatSession = {};
 
@@ -177,6 +178,15 @@
   server.use(bodyParser.urlencoded({extended: false}));
   server.use(bodyParser.json());
   server.use('/img', express.static(__dirname + '/img'));
+  // server.use('/', express.static(__dirname + '/public'));
+
+  server.get('/', function (req, res) {
+    res.sendFile(path.join(__dirname, '../../public', 'index.html'));
+  });
+
+  server.get('/mi.png', function (req, res) {
+    res.sendFile(path.join(__dirname, '../../public', 'mi.png'));
+  });
 
   server.get('/webhook', function (req, res) {
     console.log('get webhook' + req.query['hub.verify_token']);
