@@ -7,12 +7,10 @@
   var clc = require("cli-color"),
     request = require('request'),
     _ = require('lodash'),
-    express = require('express'),
-    server = express(),
-    bodyParser = require('body-parser'),
     https = require('https'),
     Q = require('q'),
-    path = require('path');
+    path = require('path'),
+    ra = require('require-all');
 
   var core = {}, app = {}, chatSession = {};
 
@@ -171,7 +169,7 @@
   };
 
   var mount = function (mountPoint) {
-    var libs = require('require-all')(__dirname + '/../../' + mountPoint);
+    var libs = ra(__dirname + '/../../' + mountPoint);
   };
 
   core.handleMessage = function (event, sender) {

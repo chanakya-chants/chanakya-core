@@ -1,8 +1,8 @@
 var chai = require('chai');
 var expect = chai.expect;
-var core = require('./core.js');
+var core = require('./../index.js');
 
-describe('artifact registrations', function () {
+describe('register artifact', function () {
   it('should register a response', function () {
     core.response('success', function () {
       return 'success';
