@@ -4,7 +4,7 @@
   "description": "Bot Maker",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/istanbul cover _mocha -- tests/ -R spec"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,11 @@
     "https": "^1.0.0",
     "lodash": "^4.12.0",
     "q": "^1.4.1",
-    "request": "^2.72.0"
+    "request": "^2.72.0",
+    "require-all": "^2.0.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "istanbul": "^0.4.3"
   }
 }

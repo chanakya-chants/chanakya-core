@@ -7,12 +7,10 @@
   var clc = require("cli-color"),
     request = require('request'),
     _ = require('lodash'),
-    express = require('express'),
-    server = express(),
-    bodyParser = require('body-parser'),
     https = require('https'),
     Q = require('q'),
-    path = require('path');
+    path = require('path'),
+    ra = require('require-all');
 
   var core = {}, app = {}, chatSession = {};
 
@@ -163,6 +161,7 @@
     app.token = config.token;
     app.mount = config.mount;
     mount(app.mount);
+    return app;
   };
 
   core.getExpectation = function () {
@@ -170,68 +169,10 @@
   };
 
   var mount = function (mountPoint) {
-    var libs = require('require-all')(__dirname + '/../../' + mountPoint);
-  }
+    var libs = ra(__dirname + '/../../' + mountPoint);
+  };
 
-  server.set('port', (process.env.PORT || 3000));
-
-  server.use(bodyParser.urlencoded({extended: false}));
-  server.use(bodyParser.json());
-  server.use('/img', express.static(__dirname + '/img'));
-  // server.use('/', express.static(__dirname + '/public'));
-
-  server.get('/', function (req, res) {
-    res.sendFile(path.join(__dirname, '../../public', 'index.html'));
-  });
-
-  server.get('/mi.png', function (req, res) {
-    res.sendFile(path.join(__dirname, '../../public', 'mi.png'));
-  });
-
-  server.get('/webhook', function (req, res) {
-    console.log('get webhook' + req.query['hub.verify_token']);
-    if (req.query['hub.verify_token'] === app.token) {
-      res.send(req.query['hub.challenge']);
-    } else {
-      res.send('Error, wrong validation token');
-    }
-  });
-
-  server.post('/webhook/', function (req, res) {
-
-    messaging_events = req.body.entry[0].messaging;
-
-    for (i = 0; i < messaging_events.length; i++) {
-      var event = req.body.entry[0].messaging[i];
-      var sender = event.sender.id;
-
-      console.log(event, sender);
-
-      if (_.isUndefined(chatSession[sender])) {
-        https.get('https://graph.facebook.com/v2.6/' + sender + '?access_token=' + app.token, function (res) {
-          res.setEncoding('utf8');
-          res.on('data', function (d) {
-            d = JSON.parse(d);
-            d.id = sender;
-            d.expectation = app.expectation;
-            chatSession[sender] = _.clone(d);
-            handleMessage(event, chatSession[sender]);
-          });
-        }).on('error', function (e) {
-          console.error(e);
-        });
-      } else {
-        handleMessage(event, chatSession[sender]);
-      }
-    }
-    res.sendStatus(200);
-  });
-
-  server.listen(server.get('port'), function () {
-    console.log('Node server is running on port', server.get('port'));
-  });
-
-  function handleMessage(event, sender) {
+  core.handleMessage = function (event, sender) {
     if (event.message && event.message.text) {
       core.processExpectation(event.message.text, sender).then(function (res) {
         core.dispatch(res, sender);
@@ -243,7 +184,15 @@
     } else if (event.message && event.message.attachments) {
       core.dispatch(event.message.attachments[0].payload.url, sender);
     }
-  }
+  };
+
+  core.getSession = function (id) {
+    return chatSession[id];
+  };
+
+  core.setSession = function (sessionData) {
+    chatSession[sessionData.id] = sessionData;
+  };
 
   module.exports = core;
 
