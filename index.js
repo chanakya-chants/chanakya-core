@@ -7,10 +7,12 @@
   var clc = require("cli-color"),
     request = require('request'),
     _ = require('lodash'),
+    express = require('express'),
+    server = express(),
+    bodyParser = require('body-parser'),
     https = require('https'),
     Q = require('q'),
-    path = require('path'),
-    ra = require('require-all');
+    path = require('path');
 
   var core = {}, app = {}, chatSession = {};
 
@@ -18,15 +20,20 @@
     validators: {},
     responses: {},
     expectations: {},
-    responseExpectation: {}
+    responseExpectation: {},
+    expectationValidators: {}
   };
 
   function register(type) {
-    return function (name, body, next) {
+    return function (name, next, body) {
       if (_.isUndefined(artifacts[type][name])) {
         artifacts[type][name] = body;
-        if (!_.isUndefined(next) && type === 'responses') {
-          artifacts.responseExpectation[name] = next;
+        if (!_.isUndefined(next)) {
+          if (type === 'responses') {
+            artifacts.responseExpectation[name] = next;
+          } else if (type === 'expectations') {
+            artifacts.expectationValidators[name] = next;
+          }
         }
       } else {
         console.error(clc.red(type + ' : ' + name + ' already registered'));
@@ -87,25 +94,16 @@
   core.getAllExpectations = listArtifacts('expectations');
 
   core.expect = function (expectation, payload, sender) {
-    var foo = artifacts.expectations[expectation].call(this, payload);
-    var validationResult = core.validate(foo.validators[0], payload);
+    var validationResult = core.validate(artifacts.expectationValidators[expectation][0], payload);
     return validationResult.then(function (res) {
-      if (res) {
-        return Q.fcall(function () {
-          if (_.isString(res)) {
-            foo.success.push(res);
-          }
-          return core.respond(foo.success[0], sender, payload);
-        });
-      } else {
-        return Q.fcall(function () {
-          return core.respond(foo.fail[0], sender);
-        });
-      }
+      var responses = artifacts.expectations[expectation].call(this, res);
+      return Q.fcall(function () {
+        return responses;
+      });
     }, function (err) {
-      console.log(err);
+      console.error(err);
     });
-  };
+  }
 
   /**
    * Process Expectation
@@ -115,7 +113,11 @@
     if (chatSession[sender.id].expectation !== 'postback') {
       return core.expect(chatSession[sender.id].expectation, payload, sender).then(
         function (res) {
-          return res;
+          var responses = [];
+          _.each(res, function (responseName) {
+            responses.push(core.respond(responseName, sender, payload));
+          })
+          return responses;
         }, function (err) {
           return err;
         }
@@ -169,13 +171,15 @@
   };
 
   var mount = function (mountPoint) {
-    var libs = ra(__dirname + '/../../' + mountPoint);
+    var libs = require('require-all')(__dirname + '/../../' + mountPoint);
   };
 
   core.handleMessage = function (event, sender) {
     if (event.message && event.message.text) {
       core.processExpectation(event.message.text, sender).then(function (res) {
-        core.dispatch(res, sender);
+        _.each(res, function (r) {
+          core.dispatch(r, sender);
+        })
       }, function (err) {
         console.log(err);
       })
