@@ -48,19 +48,19 @@
   }
 
   function invoke(type) {
-    return function (name, params) {
+    return function (name, param1, param2) {
       if (_.isUndefined(artifacts[type][name])) {
         console.error(clc.red(name + ' is not a registered ' + type + '!!! You may want to check for typo as well.'));
       } else {
         if (type === 'responses') {
           if (_.isUndefined(artifacts.responseExpectation[name])) {
-            chatSession[params.id].expectation = 'postback';
+            chatSession[param1.id].expectation = 'postback';
           } else {
-            chatSession[params.id].expectation = artifacts.responseExpectation[name];
+            chatSession[param1.id].expectation = artifacts.responseExpectation[name];
           }
         }
 
-        return artifacts[type][name].call(this, params)
+        return artifacts[type][name].call(this, param1, param2);
       }
     };
   }
@@ -96,7 +96,32 @@
   core.expect = function (expectation, payload, sender) {
     var validationResult = core.validate(artifacts.expectationValidators[expectation][0], payload);
     return validationResult.then(function (res) {
-      var responses = artifacts.expectations[expectation].call(this, res);
+      var outcome = artifacts.expectations[expectation].call(this, res);
+      var responses = [];
+
+      if (_.isObject(outcome)) {
+        responses = _.map(outcome.responses, function (response) {
+          return {
+            data: outcome.data,
+            name: response
+          };
+        })
+      } else if (_.isArray(outcome)) {
+        responses = _.map(outcome, function (response) {
+          return {
+            data: null,
+            name: response
+          };
+        });
+      } else {
+        responses = _.map(['fail'], function (response) {
+          return {
+            data: null,
+            name: response
+          };
+        });
+      }
+
       return Q.fcall(function () {
         return responses;
       });
@@ -114,8 +139,8 @@
       return core.expect(chatSession[sender.id].expectation, payload, sender).then(
         function (res) {
           var responses = [];
-          _.each(res, function (responseName) {
-            responses.push(core.respond(responseName, sender, payload));
+          _.each(res, function (responseObj) {
+            responses.push(core.respond(responseObj.name, sender, responseObj.data));
           })
           return responses;
         }, function (err) {
@@ -140,7 +165,7 @@
     return core.respond(payload, sender);
   };
 
-  core.dispatch = function (message, sender) {
+  core.dispatch = function (message, sender, payload) {
     request({
       url: 'https://graph.facebook.com/v2.6/me/messages',
       qs: {access_token: app.token},
