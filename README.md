@@ -49,9 +49,9 @@ Cfb.init(bot);
 ### Creating a response
 
 `chanakya.response` takes 3 parameters
-* response name
-* followup expectation state
-* response creation method
+* response name (String)
+* followup expectation state (String)
+* response creation method (Function)
 
 ```javascript
 chanakya.response('fail', 'greetings', function (to, validatorResult) {
@@ -62,6 +62,11 @@ chanakya.response('fail', 'greetings', function (to, validatorResult) {
 ```
 
 ### Creating a expectation
+
+`chanakya.expectation` also takes 3 parameters 
+* expectation name (String)
+* validators list (Array) *Although it's an array for now it will accept only one validator name*
+* expectation rules (Function)
 
 ```javascript
 chanakya.expectation('greetings', ['isGreetings'], function (res) {
@@ -81,6 +86,11 @@ chanakya.expectation('greetings', ['isGreetings'], function (res) {
 ```
 
 ### Creating a validator
+
+`chanakya.validator` also takes 3 parameters 
+* validator name (String)
+* blank parameter (null)
+* Validation rules (Function)
 
 ```javascript
 core.validator('isGreetings', null, function (message) {
