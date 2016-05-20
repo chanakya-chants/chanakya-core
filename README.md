@@ -51,7 +51,9 @@ Cfb.init(bot);
 `chanakya.response` takes 3 parameters
 * response name (String)
 * followup expectation state (String)
-* response creation method (Function)
+* response creation method (Function). It have two parameters which get injected:
+  * `to` contains the sender detail
+  * `validatorResult` contains the result form the validator. You can use these two parameters to personalise or customize the response. 
 
 ```javascript
 chanakya.response('fail', 'greetings', function (to, validatorResult) {
@@ -67,6 +69,8 @@ chanakya.response('fail', 'greetings', function (to, validatorResult) {
 * expectation name (String)
 * validators list (Array) *Although it's an array for now it will accept only one validator name*
 * expectation rules (Function)
+
+After the expectation receives a `message` from chat window is pass on the message to the validator `isGreetings` in this case and the result is injected into the 3rd paramter function, `res` in this case.
 
 ```javascript
 chanakya.expectation('greetings', ['isGreetings'], function (res) {
@@ -91,6 +95,8 @@ chanakya.expectation('greetings', ['isGreetings'], function (res) {
 * validator name (String)
 * blank parameter (null)
 * Validation rules (Function)
+
+Validator should always return a `Promise`. We are using `Q` to make a promise here.
 
 ```javascript
 core.validator('isGreetings', null, function (message) {
