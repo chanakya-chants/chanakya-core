@@ -106,6 +106,8 @@ core.validator('isGreetings', null, function (message) {
 });
 ```
 
+## Contributing
+
 ## License 
 
 The MIT License (MIT)
