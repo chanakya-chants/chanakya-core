@@ -4,6 +4,8 @@
 
 (function () {
 
+  'use strict';
+
   const request = require('request'),
     _ = require('lodash'),
     Q = require('q'),
