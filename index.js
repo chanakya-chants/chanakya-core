@@ -141,7 +141,7 @@
         return responses;
       });
     }, function (err) {
-      console.error(err);
+      throw new Error(err);
     });
   };
 
@@ -192,13 +192,13 @@
       method: 'POST',
       json: {
         recipient: {id: sender.id},
-        message: message,
+        message: message
       }
     }, function (error, response) {
       if (error) {
-        console.log('Error sending message: ', error);
+        throw new Error('Error sending message: ', error);
       } else if (response.body.error) {
-        console.log('Error: ', response.body.error);
+        throw new Error('Error: ', response.body.error);
       }
     });
   };

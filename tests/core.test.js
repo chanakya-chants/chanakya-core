@@ -58,10 +58,17 @@
   });
 
   describe('app bootstrap', function () {
+    var mount;
+    beforeEach(function () {
+      mount = sinon.stub(core, 'mount', function () {
+      });
+    });
+
+    afterEach(function () {
+      mount.restore();
+    });
     it('should bootstrap the app and return a valid app', function () {
 
-      sinon.stub(core, 'mount', function () {
-      });
       expect(core.bootstrap({
         mount: 'bot',
         expectation: 'greetings',
@@ -84,7 +91,16 @@
   });
 
   describe('expectations', function () {
-    it('shouls return the app current expectation', function () {
+    var mount;
+    beforeEach(function () {
+      mount = sinon.stub(core, 'mount', function () {
+      });
+    });
+
+    afterEach(function () {
+      mount.restore();
+    });
+    it('should return the app current expectation', function () {
       core.bootstrap({
         mount: 'bot',
         expectation: 'greetings',
