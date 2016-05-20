@@ -28,42 +28,62 @@ It consists of three parts :
 
 ## Usage
 
-```javascript
-var C = require('chanakya');
+### Application bootstrap
 
-C.bootstrap({
+We would need
+
+#### index.js
+```javascript
+var C = require('chanakya'),
+  Cfb = require('chanakya-facebook');
+
+var bot = C.bootstrap({
   mount: '<folder containing chankya artifacts>',
   expectation: '<entry expectation>',
   token: '<token>'
 });
+
+Cfb.init(bot);
 ```
 
 ### Creating a response
 
+`chanakya.response` takes 3 parameters
+* response name
+* followup expectation state
+* response creation method
+
 ```javascript
-core.response('fail', function (to) {
+chanakya.response('fail', 'greetings', function (to, validatorResult) {
   return {
     text: `I am sorry ${to.first_name}, I am unable to understand what you mean.`
   };
-}, 'greetings');
+});
 ```
 
 ### Creating a expectation
 
 ```javascript
-core.expectation('greetings', function () {
-  return {
-    validators : ['isGreetings'],
-    success : ['start'],
-    fail: ['fail']
-  };
+chanakya.expectation('greetings', ['isGreetings'], function (res) {
+  switch (res) {
+    case true:
+      return {
+        data: res,
+        responses: ['fail', 'success']
+      };
+      break;
+    case false:
+      return ['fail'];
+      break;
+  }
 });
+
 ```
 
 ### Creating a validator
 
 ```javascript
-core.validator('isGreetings', function (message) {
+core.validator('isGreetings', null, function (message) {
   return Q.fcall(function () {
     return message == 'hi';
   });
