@@ -4,53 +4,62 @@
 
 (function () {
 
-  var clc = require("cli-color"),
-    request = require('request'),
+  'use strict';
+
+  const request = require('request'),
     _ = require('lodash'),
-    express = require('express'),
-    server = express(),
-    bodyParser = require('body-parser'),
-    https = require('https'),
     Q = require('q'),
     path = require('path');
 
-  var core = {}, app = {}, chatSession = {};
+  let core = {}, app = {}, chatSession = {},
+    artifacts = {
+      validators: {},
+      responses: {},
+      expectations: {},
+      responseExpectation: {},
+      expectationValidators: {}
+    };
 
-  var artifacts = {
-    validators: {},
-    responses: {},
-    expectations: {},
-    responseExpectation: {},
-    expectationValidators: {}
-  };
-
+  /**
+   *
+   * @param type
+   * @returns {Function}
+   */
   function register(type) {
     return function (name, next, body) {
       if (_.isUndefined(artifacts[type][name])) {
         artifacts[type][name] = body;
-        if (!_.isUndefined(next)) {
-          if (type === 'responses') {
-            artifacts.responseExpectation[name] = next;
-          } else if (type === 'expectations') {
-            artifacts.expectationValidators[name] = next;
-          }
+        if (type === 'responses') {
+          artifacts.responseExpectation[name] = next;
+        } else if (type === 'expectations') {
+          artifacts.expectationValidators[name] = next;
         }
       } else {
-        console.error(clc.red(type + ' : ' + name + ' already registered'));
+        throw new Error(`${type} : ${name} already registered`);
       }
     };
   }
 
+  /**
+   *
+   * @param type
+   * @returns {Function}
+   */
   function listArtifacts(type) {
     return function () {
       return _.keys(artifacts[type])
     };
   }
 
+  /**
+   *
+   * @param type
+   * @returns {Function}
+   */
   function invoke(type) {
     return function (name, param1, param2) {
       if (_.isUndefined(artifacts[type][name])) {
-        console.error(clc.red(name + ' is not a registered ' + type + '!!! You may want to check for typo as well.'));
+        throw new Error(name + ' is not a registered ' + type + '!!! You may want to check for typo as well.');
       } else {
         if (type === 'responses') {
           if (_.isUndefined(artifacts.responseExpectation[name])) {
@@ -59,7 +68,6 @@
             chatSession[param1.id].expectation = artifacts.responseExpectation[name];
           }
         }
-
         return artifacts[type][name].call(this, param1, param2);
       }
     };
@@ -93,6 +101,13 @@
 
   core.getAllExpectations = listArtifacts('expectations');
 
+  /**
+   *
+   * @param expectation
+   * @param payload
+   * @param sender
+   * @returns {Promise.<TResult>}
+   */
   core.expect = function (expectation, payload, sender) {
     var validationResult = core.validate(artifacts.expectationValidators[expectation][0], payload);
     return validationResult.then(function (res) {
@@ -126,9 +141,9 @@
         return responses;
       });
     }, function (err) {
-      console.error(err);
+      throw new Error(err);
     });
-  }
+  };
 
   /**
    * Process Expectation
@@ -141,7 +156,7 @@
           var responses = [];
           _.each(res, function (responseObj) {
             responses.push(core.respond(responseObj.name, sender, responseObj.data));
-          })
+          });
           return responses;
         }, function (err) {
           return err;
@@ -165,60 +180,92 @@
     return core.respond(payload, sender);
   };
 
-  core.dispatch = function (message, sender, payload) {
+  /**
+   *
+   * @param message
+   * @param sender
+   */
+  var dispatch = function (message, sender) {
     request({
       url: 'https://graph.facebook.com/v2.6/me/messages',
       qs: {access_token: app.token},
       method: 'POST',
       json: {
         recipient: {id: sender.id},
-        message: message,
+        message: message
       }
     }, function (error, response) {
       if (error) {
-        console.log('Error sending message: ', error);
+        throw new Error('Error sending message: ', error);
       } else if (response.body.error) {
-        console.log('Error: ', response.body.error);
+        throw new Error('Error: ', response.body.error);
       }
     });
   };
 
+  /**
+   *
+   * @param config
+   * @returns {{}}
+   */
   core.bootstrap = function (config) {
     app.expectation = config.expectation;
     app.token = config.token;
     app.mount = config.mount;
-    mount(app.mount);
+    core.mount(app.mount);
     return app;
   };
 
+  /**
+   *
+   * @returns {string|*|string}
+   */
   core.getExpectation = function () {
     return app.expectation;
   };
 
-  var mount = function (mountPoint) {
+  /**
+   *
+   * @param mountPoint
+   */
+  core.mount = function (mountPoint) {
     var libs = require('require-all')(__dirname + '/../../' + mountPoint);
   };
 
+  /**
+   *
+   * @param event
+   * @param sender
+   */
   core.handleMessage = function (event, sender) {
     if (event.message && event.message.text) {
       core.processExpectation(event.message.text, sender).then(function (res) {
         _.each(res, function (r) {
-          core.dispatch(r, sender);
+          dispatch(r, sender);
         })
       }, function (err) {
         console.log(err);
       })
     } else if (event.postback) {
-      core.dispatch(core.processPostback(event.postback.payload, sender), sender);
+      dispatch(core.processPostback(event.postback.payload, sender), sender);
     } else if (event.message && event.message.attachments) {
-      core.dispatch(event.message.attachments[0].payload.url, sender);
+      dispatch(event.message.attachments[0].payload.url, sender);
     }
   };
 
+  /**
+   * return session data from in-memory session map
+   * @param id
+   * @returns {*}
+   */
   core.getSession = function (id) {
     return chatSession[id];
   };
 
+  /**
+   * set session data from in-memory session map
+   * @param sessionData
+   */
   core.setSession = function (sessionData) {
     chatSession[sessionData.id] = sessionData;
   };
