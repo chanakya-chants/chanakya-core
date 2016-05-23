@@ -10,8 +10,8 @@
     "type": "git",
     "url": "git+https://github.com/skeep/chanakya.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Suman Paul",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/skeep/chanakya/issues"
   },
