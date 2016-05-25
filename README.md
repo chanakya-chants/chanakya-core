@@ -1,5 +1,9 @@
 # chanakya-core
 
+![Chanakya logo](https://raw.githubusercontent.com/chanakya-chants/chanakya-core/master/Chanakya_logo.jpg)
+
+Thanks **Sachin Pol** for the logo.
+
 **chanakya** is a framework to author chat bots. 
 
 It consists of three parts :
