@@ -7,18 +7,18 @@
   'use strict';
 
   const request = require('request'),
-    _ = require('lodash'),
-    Q = require('q'),
-    path = require('path');
+      _ = require('lodash'),
+      Q = require('q'),
+      path = require('path');
 
   let core = {}, app = {}, chatSession = {},
-    artifacts = {
-      validators: {},
-      responses: {},
-      expectations: {},
-      responseExpectation: {},
-      expectationValidators: {}
-    };
+      artifacts = {
+        validators: {},
+        responses: {},
+        expectations: {},
+        responseExpectation: {},
+        expectationValidators: {}
+      };
 
   /**
    *
@@ -158,12 +158,18 @@
    */
   core.expect = function(expectation, payload, sender) {
     var validationResult = core.validate(artifacts.expectationValidators[expectation][0], payload);
-    return validationResult
-      .then(function(res) {
-        return _.isUndefined(res.json) ? res : res.json();
-      }).then(function(res) {
-        return _createResponse(expectation, res);
-      });
+    var then = validationResult.then;
+    if (typeof then === 'function') {
+      return validationResult
+          .then(function(res) {
+            return _.isUndefined(res.json) ? res : res.json();
+          }).then(function(res) {
+            return _createResponse(expectation, res);
+          });
+    } else {
+      return _createResponse(expectation, validationResult);
+    }
+
   };
 
   /**
@@ -173,16 +179,16 @@
   core.processExpectation = function(payload, sender) {
     if (chatSession[sender.id].expectation !== 'postback') {
       return core.expect(chatSession[sender.id].expectation, payload, sender).then(
-        function(res) {
-          var responses = [];
-          _.each(res, function(responseObj) {
-            responses.push(core.respond(responseObj.name, sender, responseObj.data));
-          });
+          function(res) {
+            var responses = [];
+            _.each(res, function(responseObj) {
+              responses.push(core.respond(responseObj.name, sender, responseObj.data));
+            });
 
-          return responses;
-        }, function(err) {
-          return err;
-        }
+            return responses;
+          }, function(err) {
+            return err;
+          }
       );
     } else {
       return Q.fcall(function() {
