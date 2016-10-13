@@ -2,7 +2,7 @@
  * Created by suman on 10/05/16.
  */
 
-(function () {
+(function() {
 
   'use strict';
 
@@ -26,7 +26,7 @@
    * @returns {Function}
    */
   function register(type) {
-    return function (name, next, body) {
+    return function(name, next, body) {
       if (_.isUndefined(artifacts[type][name])) {
         artifacts[type][name] = body;
         if (type === 'responses') {
@@ -46,7 +46,7 @@
    * @returns {Function}
    */
   function listArtifacts(type) {
-    return function () {
+    return function() {
       return _.keys(artifacts[type])
     };
   }
@@ -57,7 +57,7 @@
    * @returns {Function}
    */
   function invoke(type) {
-    return function (name, param1, param2) {
+    return function(name, param1, param2) {
       if (_.isUndefined(artifacts[type][name])) {
         throw new Error(name + ' is not a registered ' + type + '!!! You may want to check for typo as well.');
       } else {
@@ -81,7 +81,13 @@
 
   core.getAllValidators = listArtifacts('validators');
 
-  core.validate = invoke('validators');
+  core.validate = function(name, param1, param2) {
+    if (_.isUndefined(artifacts.validators[name])) {
+      throw new Error(name + ' is not a registered response!!! You may want to check for typo as well.');
+    } else {
+      return artifacts.validators[name].call(this, param1, param2);
+    }
+  };
 
   /**
    * Responses
@@ -91,7 +97,18 @@
 
   core.getAllResponses = listArtifacts('responses');
 
-  core.respond = invoke('responses');
+  core.respond = function(name, param1, param2) {
+    if (_.isUndefined(artifacts.responses[name])) {
+      throw new Error(name + ' is not a registered response!!! You may want to check for typo as well.');
+    } else {
+      if (_.isUndefined(artifacts.responseExpectation[name])) {
+        chatSession[param1.id].expectation = 'postback';
+      } else {
+        chatSession[param1.id].expectation = artifacts.responseExpectation[name];
+      }
+      return artifacts.responses[name].call(this, param1, param2);
+    }
+  };
 
   /**
    * Expectations
@@ -101,6 +118,37 @@
 
   core.getAllExpectations = listArtifacts('expectations');
 
+  function _createResponse(expectation, res) {
+    var outcome = artifacts.expectations[expectation].call(this, res);
+    var responses = [];
+    if (_.isPlainObject(outcome)) {
+      responses = _.map(outcome.responses, function(response) {
+        return {
+          data: outcome.data,
+          name: response
+        };
+      })
+    } else if (_.isArray(outcome)) {
+      responses = _.map(outcome, function(response) {
+        return {
+          data: null,
+          name: response
+        };
+      });
+    } else {
+      responses = _.map(['fail'], function(response) {
+        return {
+          data: null,
+          name: response
+        };
+      });
+    }
+
+    return Q.fcall(function() {
+      return responses;
+    });
+  }
+
   /**
    *
    * @param expectation
@@ -108,62 +156,36 @@
    * @param sender
    * @returns {Promise.<TResult>}
    */
-  core.expect = function (expectation, payload, sender) {
+  core.expect = function(expectation, payload, sender) {
     var validationResult = core.validate(artifacts.expectationValidators[expectation][0], payload);
-    return validationResult.then(function (res) {
-      var outcome = artifacts.expectations[expectation].call(this, res);
-      var responses = [];
-
-      if (_.isObject(outcome)) {
-        responses = _.map(outcome.responses, function (response) {
-          return {
-            data: outcome.data,
-            name: response
-          };
-        })
-      } else if (_.isArray(outcome)) {
-        responses = _.map(outcome, function (response) {
-          return {
-            data: null,
-            name: response
-          };
-        });
-      } else {
-        responses = _.map(['fail'], function (response) {
-          return {
-            data: null,
-            name: response
-          };
-        });
-      }
-
-      return Q.fcall(function () {
-        return responses;
+    return validationResult
+      .then(function(res) {
+        return _.isUndefined(res.json) ? res : res.json();
+      }).then(function(res) {
+        return _createResponse(expectation, res);
       });
-    }, function (err) {
-      throw new Error(err);
-    });
   };
 
   /**
    * Process Expectation
    * @param payload
    */
-  core.processExpectation = function (payload, sender) {
+  core.processExpectation = function(payload, sender) {
     if (chatSession[sender.id].expectation !== 'postback') {
       return core.expect(chatSession[sender.id].expectation, payload, sender).then(
-        function (res) {
+        function(res) {
           var responses = [];
-          _.each(res, function (responseObj) {
+          _.each(res, function(responseObj) {
             responses.push(core.respond(responseObj.name, sender, responseObj.data));
           });
+
           return responses;
-        }, function (err) {
+        }, function(err) {
           return err;
         }
       );
     } else {
-      return Q.fcall(function () {
+      return Q.fcall(function() {
         return core.respond('fail', sender);
       });
     }
@@ -175,8 +197,7 @@
    * @param sender
    * @returns {*}
    */
-  core.processPostback = function (payload, sender) {
-    // return chatSession[sender.id].expectation === 'postback' ? core.respond(payload, sender) : core.respond('fail', sender);
+  core.processPostback = function(payload, sender) {
     return core.respond(payload, sender);
   };
 
@@ -185,20 +206,18 @@
    * @param message
    * @param sender
    */
-  var dispatch = function (message, sender) {
+  var dispatch = function(message, sender) {
     request({
       url: 'https://graph.facebook.com/v2.6/me/messages',
-      qs: {access_token: app.token},
+      qs: { access_token: app.token },
       method: 'POST',
       json: {
-        recipient: {id: sender.id},
+        recipient: { id: sender.id },
         message: message
       }
-    }, function (error, response) {
+    }, function(error, response, body) {
       if (error) {
         throw new Error('Error sending message: ', error);
-      } else if (response.body.error) {
-        throw new Error('Error: ', response.body.error);
       }
     });
   };
@@ -208,7 +227,7 @@
    * @param config
    * @returns {{}}
    */
-  core.bootstrap = function (config) {
+  core.bootstrap = function(config) {
     app.expectation = config.expectation;
     app.token = config.token;
     app.mount = config.mount;
@@ -220,7 +239,7 @@
    *
    * @returns {string|*|string}
    */
-  core.getExpectation = function () {
+  core.getExpectation = function() {
     return app.expectation;
   };
 
@@ -228,7 +247,7 @@
    *
    * @param mountPoint
    */
-  core.mount = function (mountPoint) {
+  core.mount = function(mountPoint) {
     var libs = require('require-all')(__dirname + '/../../' + mountPoint);
   };
 
@@ -237,14 +256,14 @@
    * @param event
    * @param sender
    */
-  core.handleMessage = function (event, sender) {
-    if (event.message && event.message.text) {
-      core.processExpectation(event.message.text, sender).then(function (res) {
-        _.each(res, function (r) {
+  core.handleMessage = function(event, sender) {
+    if (event.message && event.message.text && !event.message.is_echo) {
+      core.processExpectation(event.message.text, sender).then(function(res) {
+        _.each(res, function(r) {
           dispatch(r, sender);
-        })
-      }, function (err) {
-        console.log(err);
+        });
+      }, function(err) {
+        console.error(err);
       })
     } else if (event.postback) {
       dispatch(core.processPostback(event.postback.payload, sender), sender);
@@ -258,7 +277,7 @@
    * @param id
    * @returns {*}
    */
-  core.getSession = function (id) {
+  core.getSession = function(id) {
     return chatSession[id];
   };
 
@@ -266,7 +285,7 @@
    * set session data from in-memory session map
    * @param sessionData
    */
-  core.setSession = function (sessionData) {
+  core.setSession = function(sessionData) {
     chatSession[sessionData.id] = sessionData;
   };
 
