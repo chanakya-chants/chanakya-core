@@ -186,7 +186,7 @@
       );
     } else {
       return Q.fcall(function() {
-        return core.respond('fail', sender);
+        return [core.respond('doPostback', sender), sender, null];
       });
     }
   };
