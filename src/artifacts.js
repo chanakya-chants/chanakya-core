@@ -47,7 +47,7 @@
     return artifacts[type][name];
   }
 
-  return {
+  module.exports = {
     register: register,
     list: listArtifacts,
     get: getArtifact

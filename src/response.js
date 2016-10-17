@@ -24,7 +24,7 @@
     }
   };
 
-  return {
+  module.exports = {
     register: register,
     list: listResponses,
     respond: respond

@@ -29,7 +29,7 @@
     return chatSession[id].expectation;
   };
 
-  return {
+  module.exports = {
     get: getSession,
     set: setSession,
     setX: setExpectation,

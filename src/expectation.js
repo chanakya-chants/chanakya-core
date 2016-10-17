@@ -73,7 +73,7 @@
     }
   };
 
-  return {
+  module.exports = {
     register: register,
     list: listExpectations,
     expect: expect,

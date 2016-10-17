@@ -6,11 +6,11 @@
 
   'use strict';
 
-  const session = require('./lib/session'),
-    response = require('./lib/response'),
-    validator = require('./lib/validator'),
-    expectation = require('./lib/expectation'),
-    app = require('./lib/app');
+  const session = require('./src/session'),
+    response = require('./src/response'),
+    validator = require('./src/validator'),
+    expectation = require('./src/expectation'),
+    app = require('./src/app');
 
   module.exports = {
     session: {

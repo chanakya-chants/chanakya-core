@@ -59,7 +59,7 @@
     }
   };
 
-  return {
+  module.exports = {
     bootstrap: bootstrap,
     handleMessage: handleMessage
   };

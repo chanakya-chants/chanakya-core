@@ -17,7 +17,7 @@
     }
   };
 
-  return {
+  module.exports = {
     register: register,
     listValidators: listValidators,
     validate: validate
