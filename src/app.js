@@ -40,7 +40,7 @@
   };
 
   const mount = function(mountPoint) {
-    const libs = require('require-all')(__dirname + '/../../' + mountPoint);
+    const libs = require('require-all')(__dirname + '/../../../' + mountPoint);
   };
 
   const handleMessage = function(event, sender) {

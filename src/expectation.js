@@ -5,7 +5,8 @@
     artifacts = require('./artifacts'),
     validator = require('./validator'),
     response = require('./response'),
-    session = require('./session');
+    session = require('./session'),
+    Q = require('q');
 
   const register = artifacts.register('expectations');
 
@@ -44,17 +45,22 @@
 
   const expect = function(expectation, payload) {
     const validationResult = validator.validate(artifacts.get('expectationValidators', expectation)[0], payload);
-    return validationResult
-      .then(function(res) {
-        return _.isUndefined(res.json) ? res : res.json();
-      }).then(function(res) {
-        return _createResponse(expectation, res);
-      });
+    var then = validationResult.then;
+    if (typeof then === 'function') {
+      return validationResult
+        .then(function(res) {
+          return _.isUndefined(res.json) ? res : res.json();
+        }).then(function(res) {
+          return _createResponse(expectation, res);
+        });
+    } else {
+      return _createResponse(expectation, validationResult);
+    }
   };
 
   const processExpectation = function(payload, sender) {
     if (session.getX(sender.id) !== 'postback') {
-      return core.expect(chatSession[sender.id].expectation, payload, sender).then(
+      return expect(session.getX(sender.id), payload, sender).then(
         function(res) {
           let responses = [];
           _.each(res, function(responseObj) {
