@@ -59,24 +59,27 @@
   };
 
   const processExpectation = function(payload, sender) {
-    if (session.getX(sender.id) !== 'postback') {
-      return expect(session.getX(sender.id), payload, sender).then(
-        function(res) {
-          let responses = [];
-          _.each(res, function(responseObj) {
-            responses.push(response.respond(responseObj.name, sender, responseObj.data));
-          });
+    return session.get(sender.id).then(function(currentSession) {
+      if (currentSession.expectation !== 'postback') {
+        return expect(currentSession.expectation, payload, sender).then(
+          function(res) {
+            let responses = [];
+            _.each(res, function(responseObj) {
+              responses.push(response.respond(responseObj.name, sender, responseObj.data));
+            });
 
-          return responses;
-        }, function(err) {
-          return err;
-        }
-      );
-    } else {
-      return Q.fcall(function() {
-        return response.respond('fail', sender);
-      });
-    }
+            return responses;
+          }, function(err) {
+            return err;
+          }
+        );
+      } else {
+        return Q.fcall(function() {
+          return response.respond('fail', sender);
+        });
+      }
+    });
+
   };
 
   module.exports = {
