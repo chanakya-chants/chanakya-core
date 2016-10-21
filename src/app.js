@@ -44,6 +44,10 @@
   };
 
   const handleMessage = function(event, sender) {
+    console.log(JSON.stringify({
+      event: event,
+      sender: sender
+    }));
     if (event.message && event.message.text && !event.message.is_echo) {
       expectation.process(event.message.text, sender).then(function(res) {
         _.each(res, function(r) {
