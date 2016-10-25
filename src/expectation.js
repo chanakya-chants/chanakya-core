@@ -43,20 +43,34 @@
     });
   };
 
-  const expect = function(expectation, payload) {
-    const validationResult = validator.validate(artifacts.get('expectationValidators', expectation)[0], payload);
+  const expect = function(expectation, payload, sender) {
+    const validationResult = validator.validate(artifacts.get('expectationValidators', expectation)[0], payload, sender);
     var then = validationResult.then;
     if (typeof then === 'function') {
       return validationResult
         .then(function(res) {
-          return _.isUndefined(res.json) ? res : res.json();
+          if (_.isUndefined(res.json)) {
+            _updateSession(sender, expectation, res);
+            return res;
+          } else {
+            return res.json();
+          }
         }).then(function(res) {
+          _updateSession(sender, expectation, res);
           return _createResponse(expectation, res);
         });
     } else {
       return _createResponse(expectation, validationResult);
     }
   };
+
+  function _updateSession(sender, expectation, value) {
+    session.get(sender.id.toString()).then(function(res) {
+      let thisSession = _.clone(res);
+      thisSession[expectation] = JSON.stringify(value);
+      session.set(thisSession);
+    });
+  }
 
   const processExpectation = function(payload, sender) {
     return session.get(sender.id).then(function(currentSession) {
