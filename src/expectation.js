@@ -72,10 +72,11 @@
     });
   }
 
-  const processExpectation = function(payload, sender) {
+  const processExpectation = function(payload, sender, isExpectation) {
     return session.get(sender.id).then(function(currentSession) {
       if (currentSession.expectation !== 'postback') {
-        return expect(currentSession.expectation, payload, sender).then(
+        let expectation = (isExpectation) ? payload : currentSession.expectation
+        return expect(expectation, payload, sender).then(
           function(res) {
             let responses = [];
             _.each(res, function(responseObj) {
