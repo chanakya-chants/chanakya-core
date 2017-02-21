@@ -48,9 +48,8 @@
       event: event,
       sender: sender
     }));
-    let isExpectation = payload.includes('expect_');
     if (event.message && event.message.text && !event.message.is_echo) {
-      expectation.process(event.message.text, sender, isExpectation).then(function(res) {
+      expectation.process(event.message.text, sender, false).then(function(res) {
         _.each(res, function(r) {
           dispatch(r, sender);
         });
@@ -59,6 +58,7 @@
       })
     } else if (event.postback) {
       const payload = event.postback.payload
+      let isExpectation = payload.includes('expect_');
       let eventName = (isExpectation) ? payload.split('_')[1] : payload
       if(isExpectation) {
           expectation.process(eventName, sender, isExpectation).then(function(res) {
