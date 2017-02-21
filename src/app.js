@@ -48,8 +48,9 @@
       event: event,
       sender: sender
     }));
+    let isExpectation = payload.includes('expect_');
     if (event.message && event.message.text && !event.message.is_echo) {
-      expectation.process(event.message.text, sender).then(function(res) {
+      expectation.process(event.message.text, sender, isExpectation).then(function(res) {
         _.each(res, function(r) {
           dispatch(r, sender);
         });
@@ -57,7 +58,19 @@
         console.error(err);
       })
     } else if (event.postback) {
-      dispatch(processPostback(event.postback.payload, sender), sender);
+      const payload = event.postback.payload
+      let eventName = (isExpectation) ? payload.split('_')[1] : payload
+      if(isExpectation) {
+          expectation.process(eventName, sender, isExpectation).then(function(res) {
+          _.each(res, function(r) {
+            dispatch(r, sender);
+          });
+        }, function(err) {
+          console.error(err);
+        })
+      } else {
+        dispatch(processPostback(event.postback.payload, sender), sender);
+      } 
     } else if (event.message && event.message.attachments) {
       dispatch(event.message.attachments[0].payload.url, sender);
     }
